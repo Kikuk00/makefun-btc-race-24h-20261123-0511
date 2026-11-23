@@ -30,6 +30,9 @@
 // give the same orders. A bar the harness skips (a gap) adds nothing to any
 // indicator, exactly like the kit baselines.
 //
+// The closes window is kept at 61 bars: the longest lookback (60, the top-up
+// confirmation) plus the current bar, so every indicator read stays in range.
+//
 // Node 22, standard library only (node:readline via the vendored shim).
 
 import { runBars, type Bar, type BarsState, type BuyInput, type SellInput } from './vendor/makefun-bars.ts';
@@ -52,6 +55,7 @@ const DD_HALT_BARS = 240; // bars the drawdown brake halts new entries for
 const COOLDOWN_BARS = 30; // bars after a stop-out before a new entry
 const LATE_CUTOFF_BARS = 1380; // no new entries once this many bars are seen
 const MAX_SLIPPAGE_BPS = 100; // 1% past the close the order was decided on
+const CLOSES_KEPT = 61; // closes window: longest lookback (60) + current bar
 
 interface Ema {
   span: number;
@@ -104,7 +108,7 @@ function push(bar: Bar): Series {
   if (s === undefined) series.set(bar.symbol, (s = newSeries()));
   const c = Number(bar.c);
   s.closes.push(c);
-  if (s.closes.length > 61) s.closes.shift();
+  if (s.closes.length > CLOSES_KEPT) s.closes.shift();
   emaStep(s.fast, c);
   emaStep(s.slow, c);
   s.seen++;
